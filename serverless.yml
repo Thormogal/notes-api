@@ -1,0 +1,124 @@
+org: oskarlovstrand
+app: notes
+service: notes-api
+
+plugins:
+  - serverless-dotenv-plugin # Plugin för att ladda .env
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${env:REGION} # REGION från .env
+  role: arn:aws:iam::047719658350:role/notes-api
+  environment:
+    JWT_SECRET: ${env:JWT_SECRET} # JWT_SECRET från .env
+    USERS_TABLE: ${env:USERS_TABLE} # USERS_TABLE från .env
+    NOTES_TABLE: ${env:NOTES_TABLE} # NOTES_TABLE från .env
+    DELETED_NOTES_TABLE: ${env:DELETED_NOTES_TABLE} # DELETED_NOTES_TABLE från .env
+
+functions:
+  signup:
+    handler: handlers/user.signup
+    timeout: 10
+    memorySize: 128
+    events:
+      - http:
+          path: api/user/signup
+          method: post
+
+  login:
+    handler: handlers/user.login
+    timeout: 10
+    memorySize: 128
+    events:
+      - http:
+          path: api/user/login
+          method: post
+
+  authorizer:
+    handler: handlers/authorizer.handler
+    timeout: 5
+    memorySize: 128
+
+  getNotes:
+    handler: handlers/notes/getNotes.getNotes
+    timeout: 10
+    memorySize: 256
+    events:
+      - http:
+          path: api/notes
+          method: get
+          authorizer:
+            name: authorizer
+
+  createNote:
+    handler: handlers/notes/createNote.createNote
+    timeout: 10
+    memorySize: 256
+    events:
+      - http:
+          path: api/notes
+          method: post
+          authorizer:
+            name: authorizer
+
+  deleteNote:
+    handler: handlers/notes/deleteNote.deleteNote
+    timeout: 10
+    memorySize: 256
+    events:
+      - http:
+          path: api/notes
+          method: delete
+          authorizer:
+            name: authorizer
+
+  restoreNote:
+    handler: handlers/notes/restoreNote.restoreNote
+    timeout: 10
+    memorySize: 256
+    events:
+      - http:
+          path: api/notes/restore
+          method: post
+          authorizer:
+            name: authorizer
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:USERS_TABLE} # Separat tabell för användare
+        AttributeDefinitions:
+          - AttributeName: username
+            AttributeType: S
+        KeySchema:
+          - AttributeName: username
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    NotesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:NOTES_TABLE} # Tabell för anteckningar
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    DeletedNotesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:DELETED_NOTES_TABLE} # Tabell för borttagna anteckningar
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
