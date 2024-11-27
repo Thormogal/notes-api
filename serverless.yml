@@ -62,6 +62,17 @@ functions:
           authorizer:
             name: authorizer
 
+  updateNote:
+    handler: handlers/notes/updateNote.handler
+    timeout: 10
+    memorySize: 256
+    events:
+      - http:
+          path: api/notes
+          method: put
+          authorizer:
+            name: authorizer
+          
   deleteNote:
     handler: handlers/notes/deleteNote.handler
     timeout: 10
