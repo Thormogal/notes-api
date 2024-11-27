@@ -1,15 +1,14 @@
-const AWS = require('aws-sdk');
-const statusCodes = require('../../utils/statusCodes');
-const authMiddleware = require('../../utils/authMiddleware');
+import middy from '@middy/core';
+import httpErrorHandler from '@middy/http-error-handler';
+import { authMiddleware } from '../../utils/authMiddleware.js';
+import AWS from 'aws-sdk';
+import statusCodes from '../../utils/statusCodes.js';
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const NOTES_TABLE = process.env.NOTES_TABLE;
 const DELETED_NOTES_TABLE = process.env.DELETED_NOTES_TABLE;
 
-module.exports.deleteNote = async (event) => {
-  const authError = await authMiddleware(event);
-  if (authError) return authError;
-
+const deleteNote = async (event) => {
   try {
     const { userId } = event.requestContext.authorizer;
     const { id } = JSON.parse(event.body);
@@ -48,3 +47,7 @@ module.exports.deleteNote = async (event) => {
     };
   }
 };
+
+export const handler = middy(deleteNote)
+  .use(authMiddleware()) // Använd den nya authMiddleware
+  .use(httpErrorHandler());

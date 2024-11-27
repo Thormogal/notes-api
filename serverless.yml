@@ -3,7 +3,6 @@ app: notes
 service: notes-api
 
 plugins:
-  - serverless-dotenv-plugin # Plugin för att ladda .env
   - serverless-offline
 
 provider:
@@ -19,7 +18,7 @@ provider:
 
 functions:
   signup:
-    handler: handlers/user.signup
+    handler: handlers/user/signup.handler
     timeout: 10
     memorySize: 128
     events:
@@ -28,7 +27,7 @@ functions:
           method: post
 
   login:
-    handler: handlers/user.login
+    handler: handlers/user/login.handler
     timeout: 10
     memorySize: 128
     events:
@@ -42,7 +41,7 @@ functions:
     memorySize: 128
 
   getNotes:
-    handler: handlers/notes/getNotes.getNotes
+    handler: handlers/notes/getNotes.handler
     timeout: 10
     memorySize: 256
     events:
@@ -53,7 +52,7 @@ functions:
             name: authorizer
 
   createNote:
-    handler: handlers/notes/createNote.createNote
+    handler: handlers/notes/createNote.handler
     timeout: 10
     memorySize: 256
     events:
@@ -64,7 +63,7 @@ functions:
             name: authorizer
 
   deleteNote:
-    handler: handlers/notes/deleteNote.deleteNote
+    handler: handlers/notes/deleteNote.handler
     timeout: 10
     memorySize: 256
     events:
@@ -75,7 +74,7 @@ functions:
             name: authorizer
 
   restoreNote:
-    handler: handlers/notes/restoreNote.restoreNote
+    handler: handlers/notes/restoreNote.handler
     timeout: 10
     memorySize: 256
     events:

@@ -1,33 +1,26 @@
-const AWS = require('aws-sdk');
-const { v4: uuidv4 } = require('uuid');
-const Joi = require('joi');
-const statusCodes = require('../../utils/statusCodes');
-const authMiddleware = require('../../utils/authMiddleware');
+import middy from '@middy/core';
+import httpJsonBodyParser from '@middy/http-json-body-parser';
+import httpErrorHandler from '@middy/http-error-handler';
+import { authMiddleware } from '../../utils/authMiddleware.js'; // Importera authMiddleware
+import AWS from 'aws-sdk';
+import { v4 as uuidv4 } from 'uuid';
+import dotenv from 'dotenv';
+import Ajv from 'ajv';
+import statusCodes from '../../utils/statusCodes.js';
+
+// Ladda miljövariabler från .env
+dotenv.config();
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const NOTES_TABLE = process.env.NOTES_TABLE;
 
-const noteSchema = Joi.object({
-  title: Joi.string().max(50).required(),
-  text: Joi.string().max(300).required(),
-});
-
-module.exports.createNote = async (event) => {
-  const authError = await authMiddleware(event);
-  if (authError) return authError;
-
+const createNote = async (event) => {
   try {
+    // Hämta användarens ID från token (via authorizer)
     const { userId } = event.requestContext.authorizer;
-    const { title, text } = JSON.parse(event.body);
+    const { title, text } = event.body;
 
-    const { error } = noteSchema.validate({ title, text });
-    if (error) {
-      return {
-        statusCode: statusCodes.BAD_REQUEST,
-        body: JSON.stringify({ message: error.details[0].message }),
-      };
-    }
-
+    // Skapa anteckning
     const newNote = {
       id: uuidv4(),
       userId,
@@ -37,6 +30,7 @@ module.exports.createNote = async (event) => {
       modifiedAt: new Date().toISOString(),
     };
 
+    // Spara till DynamoDB
     await dynamoDb.put({ TableName: NOTES_TABLE, Item: newNote }).promise();
 
     return {
@@ -47,7 +41,46 @@ module.exports.createNote = async (event) => {
     console.error('Error during createNote:', error);
     return {
       statusCode: statusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({ error: 'An error occurred' }),
+      body: JSON.stringify({ error: 'An error occurred during createNote' }),
     };
   }
 };
+
+// Schema för validering
+const createNoteSchema = {
+  type: 'object',
+  properties: {
+    body: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', maxLength: 50 },
+        text: { type: 'string', maxLength: 300 },
+      },
+      required: ['title', 'text'],
+    },
+  },
+};
+
+// Anpassad middleware för validering
+const validationMiddleware = () => {
+  const ajv = new Ajv();
+  const validate = ajv.compile(createNoteSchema);
+
+  return {
+    before: async (request) => {
+      const valid = validate(request.event);
+      if (!valid) {
+        throw new Error(
+          `Validation error: ${JSON.stringify(validate.errors)}`
+        );
+      }
+    },
+  };
+};
+
+// Konfigurera hanterare med Middy
+export const handler = middy(createNote)
+  .use(httpJsonBodyParser()) // Parsar JSON till objekt
+  .use(authMiddleware()) // Autentisering
+  .use(validationMiddleware()) // Anpassad validering
+  .use(httpErrorHandler()); // Felhantering

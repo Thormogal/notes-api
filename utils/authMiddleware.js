@@ -1,62 +1,32 @@
-const middy = require('@middy/core');
-const httpErrorHandler = require('@middy/http-error-handler');
-const jwt = require('jsonwebtoken');
-const statusCodes = require('./statusCodes'); // Importera statuskoderna
+import jwt from 'jsonwebtoken';
+import statusCodes from './statusCodes.js';
 
-/**
- * Middleware för att verifiera JWT-token och skydda skyddade endpoints.
- * @param {Object} event - AWS Lambda event objekt.
- * @returns {Object|null} - Felmeddelande om verifiering misslyckas, annars null.
- */
-const authMiddleware = async (event) => {
-  try {
-    // Kontrollera om Authorization-header finns
-    const authHeader = event.headers.Authorization || event.headers.authorization;
-    if (!authHeader) {
-      throw new Error('Authorization header is missing');
-    }
+export const authMiddleware = () => ({
+    before: async (handler) => {
+        try {
+            const event = handler.event;
+            const authHeader = event.headers.Authorization || event.headers.authorization;
 
-    // Extrahera token från Authorization-header
-    const token = authHeader.split(' ')[1]; // Förväntat format: "Bearer <token>"
-    if (!token) {
-      throw new Error('Token is missing');
-    }
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                throw new Error('Unauthorized: No or invalid Authorization header');
+            }
 
-    // Verifiera token med JWT_SECRET
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!decoded || !decoded.username) {
-      throw new Error('Invalid token payload');
-    }
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Lägg decoded data i requestContext för senare användning
-    event.requestContext.authorizer = { userId: decoded.username };
+            // Skapa authorizer om den saknas
+            if (!handler.event.requestContext) {
+                handler.event.requestContext = {};
+            }
+            if (!handler.event.requestContext.authorizer) {
+                handler.event.requestContext.authorizer = {};
+            }
 
-    // Verifiering lyckades
-    return event;
-  } catch (err) {
-    // Specifik hantering för olika JWT-fel
-    if (err.name === 'TokenExpiredError') {
-      return {
-        statusCode: statusCodes.UNAUTHORIZED,
-        body: JSON.stringify({ message: 'Token has expired' }),
-      };
-    }
-
-    if (err.name === 'JsonWebTokenError') {
-      return {
-        statusCode: statusCodes.UNAUTHORIZED,
-        body: JSON.stringify({ message: 'Invalid token' }),
-      };
-    }
-
-    // Annat oväntat fel
-    console.error('AuthMiddleware Error:', err);
-    return {
-      statusCode: statusCodes.UNAUTHORIZED,
-      body: JSON.stringify({ message: 'Unauthorized' }),
-    };
-  }
-};
-
-// Exportera middleware med Middy och felhantering
-module.exports = middy(authMiddleware).use(httpErrorHandler());
+            // Sätt värdet
+            handler.event.requestContext.authorizer.userId = decoded.username;
+        } catch (err) {
+            console.error('Error in authMiddleware before:', err);
+            throw new Error('Unauthorized: Invalid token');
+        }
+    },
+});
