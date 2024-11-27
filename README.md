@@ -9,7 +9,6 @@ Ett API för att hantera anteckningar kopplade till en användare. Anteckningarn
 - **Skapa konto och logga in**: Hantera användare.
 - **Hämta anteckningar**: Visa anteckningar kopplade till inloggad användare.
 - **Skapa, uppdatera och ta bort**: Full CRUD-funktionalitet.
-- **Återställ raderade anteckningar**: Extra funktion för att återställa borttagna anteckningar. *(VG-funktionalitet)*
 
 ---
 
