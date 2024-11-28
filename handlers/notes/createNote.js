@@ -1,7 +1,7 @@
 import middy from '@middy/core';
 import httpJsonBodyParser from '@middy/http-json-body-parser';
 import httpErrorHandler from '@middy/http-error-handler';
-import { authMiddleware } from '../../utils/authMiddleware.js'; // Importera authMiddleware
+import { authMiddleware } from '../../utils/authMiddleware.js';
 import AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
@@ -20,6 +20,10 @@ const createNote = async (event) => {
     const { userId } = event.requestContext.authorizer;
     const { title, text } = event.body;
 
+    // Logga inkommande data (för debugging)
+    console.log('Creating note for userId:', userId);
+    console.log('Incoming note data:', { title, text });
+
     // Skapa anteckning
     const newNote = {
       id: uuidv4(),
@@ -33,6 +37,7 @@ const createNote = async (event) => {
     // Spara till DynamoDB
     await dynamoDb.put({ TableName: NOTES_TABLE, Item: newNote }).promise();
 
+    // Returnera det skapade objektet
     return {
       statusCode: statusCodes.CREATED,
       body: JSON.stringify(newNote),
