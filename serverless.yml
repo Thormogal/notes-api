@@ -84,6 +84,17 @@ functions:
           authorizer:
             name: authorizer
 
+  getDeletedNotes:
+    handler: handlers/notes/getDeletedNotes.handler
+    timeout: 10
+    memorySize: 256
+    events:
+      - http:
+          path: api/notes/deleted
+          method: get
+          authorizer:
+            name: authorizer
+
   restoreNote:
     handler: handlers/notes/restoreNote.handler
     timeout: 10
