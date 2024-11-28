@@ -8,13 +8,13 @@ plugins:
 provider:
   name: aws
   runtime: nodejs20.x
-  region: ${env:REGION} # REGION från .env
+  region: ${env:REGION}
   role: arn:aws:iam::047719658350:role/notes-api
   environment:
-    JWT_SECRET: ${env:JWT_SECRET} # JWT_SECRET från .env
-    USERS_TABLE: ${env:USERS_TABLE} # USERS_TABLE från .env
-    NOTES_TABLE: ${env:NOTES_TABLE} # NOTES_TABLE från .env
-    DELETED_NOTES_TABLE: ${env:DELETED_NOTES_TABLE} # DELETED_NOTES_TABLE från .env
+    JWT_SECRET: ${env:JWT_SECRET}
+    USERS_TABLE: ${env:USERS_TABLE}
+    NOTES_TABLE: ${env:NOTES_TABLE}
+    DELETED_NOTES_TABLE: ${env:DELETED_NOTES_TABLE}
 
 functions:
   signup:
@@ -36,7 +36,7 @@ functions:
           method: post
 
   authorizer:
-    handler: handlers/authorizer.handler
+    handler: handlers/user/authorizer.handler
     timeout: 5
     memorySize: 128
 
@@ -72,7 +72,7 @@ functions:
           method: put
           authorizer:
             name: authorizer
-          
+
   deleteNote:
     handler: handlers/notes/deleteNote.handler
     timeout: 10
@@ -102,11 +102,11 @@ resources:
       Properties:
         TableName: ${env:USERS_TABLE} # Separat tabell för användare
         AttributeDefinitions:
-          - AttributeName: username
+          - AttributeName: userId
             AttributeType: S
         KeySchema:
-          - AttributeName: username
-            KeyType: HASH
+          - AttributeName: userId
+            KeyType: HASH # Partition key
         BillingMode: PAY_PER_REQUEST
 
     NotesTable:
@@ -130,9 +130,13 @@ resources:
       Properties:
         TableName: ${env:DELETED_NOTES_TABLE} # Tabell för borttagna anteckningar
         AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
           - AttributeName: id
             AttributeType: S
         KeySchema:
+          - AttributeName: userId
+            KeyType: HASH # Partition key
           - AttributeName: id
-            KeyType: HASH
+            KeyType: RANGE # Sort key
         BillingMode: PAY_PER_REQUEST

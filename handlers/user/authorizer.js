@@ -36,24 +36,32 @@ const authorize = async (event) => {
     const decoded = jwt.verify(tokenPart, process.env.JWT_SECRET);
     console.log('Token successfully decoded:', decoded);
 
+    // Kontrollera att userId finns i token payload
+    if (!decoded.userId) {
+      console.error('Missing userId in token payload');
+      throw new Error('Unauthorized');
+    }
+
     // Logga detaljer om methodArn
     console.log('methodArn for the request:', event.methodArn);
 
-    // Skapa och returnera en IAM-policy
+    // Skapa och returnera en IAM-policy som täcker alla API-endpoints
+    const apiArn = event.methodArn.split('/').slice(0, 2).join('/') + '/*'; // Tillåt alla endpoints i detta API
     const policy = {
-      principalId: decoded.username, // Unik identifierare (t.ex. användarnamn eller ID)
+      principalId: decoded.userId, // Unik identifierare baserad på userId
       policyDocument: {
         Version: '2012-10-17',
         Statement: [
           {
             Action: 'execute-api:Invoke',
             Effect: 'Allow', // Tillgång beviljad
-            Resource: event.methodArn, // ARN för resursen som begärs
+            Resource: apiArn, // Tillåt alla resurs-ARNs i detta API
           },
         ],
       },
       context: {
-        username: decoded.username, // Tillgänglig som `event.requestContext.authorizer.username`
+        userId: decoded.userId, // Tillgänglig som `event.requestContext.authorizer.userId`
+        username: decoded.username || '', // Tillgänglig för debugging (om behövs)
       },
     };
 

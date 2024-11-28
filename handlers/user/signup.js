@@ -6,6 +6,7 @@ import httpJsonBodyParser from '@middy/http-json-body-parser';
 import httpErrorHandler from '@middy/http-error-handler';
 import AWS from 'aws-sdk';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid'; // Importera för att generera userId
 import statusCodes from '../../utils/statusCodes.js';
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
@@ -15,6 +16,7 @@ const signup = async (event) => {
   try {
     const { username, password } = event.body;
 
+    // Kontrollera att både username och password skickas med
     if (!username || !password) {
       return {
         statusCode: statusCodes.BAD_REQUEST,
@@ -22,35 +24,46 @@ const signup = async (event) => {
       };
     }
 
-    // Kontrollera om användaren redan existerar
+    // Generera ett unikt userId
+    const userId = uuidv4();
+
+    // Kontrollera om användaren redan existerar (med username som unik identifierare)
     const existingUser = await dynamoDb
-      .get({
+      .scan({
         TableName: USERS_TABLE,
-        Key: { username },
+        FilterExpression: 'username = :username',
+        ExpressionAttributeValues: { ':username': username },
       })
       .promise();
 
-    if (existingUser.Item) {
+    if (existingUser.Items && existingUser.Items.length > 0) {
       return {
         statusCode: statusCodes.BAD_REQUEST,
         body: JSON.stringify({ message: 'User already exists' }),
       };
     }
 
-    // Hasha lösenordet
+    // Hasha lösenordet för säker lagring
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Lägg till ny användare i databasen
     await dynamoDb
       .put({
         TableName: USERS_TABLE,
-        Item: { username, password: hashedPassword },
+        Item: {
+          userId, // Unikt ID för användaren
+          username, // Användarnamn för användaren
+          password: hashedPassword, // Krypterat lösenord
+        },
       })
       .promise();
 
     return {
       statusCode: statusCodes.CREATED,
-      body: JSON.stringify({ message: 'User created' }),
+      body: JSON.stringify({
+        message: 'User created successfully',
+        userId, // Returnera userId som bekräftelse
+      }),
     };
   } catch (error) {
     console.error('Signup error:', error);

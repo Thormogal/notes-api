@@ -12,43 +12,62 @@ const USERS_TABLE = process.env.USERS_TABLE;
 
 // Huvudfunktion för login
 const login = async (event) => {
-  const { username, password } = event.body;
+  try {
+    const { username, password } = event.body;
 
-  // Hämta användare från DynamoDB
-  const user = await dynamoDb
-    .get({
-      TableName: USERS_TABLE,
-      Key: { username },
-    })
-    .promise();
+    // Kontrollera att både username och password finns
+    if (!username || !password) {
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({ message: 'Username and password are required' }),
+      };
+    }
 
-  if (!user.Item) {
+    // Hämta användare från DynamoDB baserat på username
+    const user = await dynamoDb
+      .scan({
+        TableName: USERS_TABLE,
+        FilterExpression: 'username = :username',
+        ExpressionAttributeValues: { ':username': username },
+      })
+      .promise();
+
+    if (!user.Items || user.Items.length === 0) {
+      return {
+        statusCode: statusCodes.UNAUTHORIZED,
+        body: JSON.stringify({ message: 'Invalid credentials' }),
+      };
+    }
+
+    const userData = user.Items[0]; // Eftersom username ska vara unikt
+
+    // Validera lösenord
+    const valid = await bcrypt.compare(password, userData.password);
+    if (!valid) {
+      return {
+        statusCode: statusCodes.UNAUTHORIZED,
+        body: JSON.stringify({ message: 'Invalid credentials' }),
+      };
+    }
+
+    // Skapa JWT-token med userId
+    const token = jwt.sign(
+      { userId: userData.userId }, // Inkludera endast userId i token
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' } // Token giltig i 1 timme
+    );
+
     return {
-      statusCode: statusCodes.UNAUTHORIZED,
-      body: JSON.stringify({ message: 'Invalid credentials' }),
+      statusCode: statusCodes.OK,
+      body: JSON.stringify({ token }), // Returnera token till klienten
+    };
+  } catch (error) {
+    console.error('Login error:', error);
+    return {
+      statusCode: statusCodes.INTERNAL_SERVER_ERROR,
+      body: JSON.stringify({ error: 'An error occurred during login' }),
     };
   }
-
-  // Validera lösenord
-  const valid = await bcrypt.compare(password, user.Item.password);
-  if (!valid) {
-    return {
-      statusCode: statusCodes.UNAUTHORIZED,
-      body: JSON.stringify({ message: 'Invalid credentials' }),
-    };
-  }
-
-  // Skapa JWT-token
-  const token = jwt.sign(
-    { username: user.Item.username },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h' }
-  );
-
-  return {
-    statusCode: statusCodes.OK,
-    body: JSON.stringify({ token }),
-  };
 };
 
 // Schema för validering
@@ -80,7 +99,7 @@ const validateInput = async (request) => {
 
 // Konfigurera hanterare med Middy
 export const handler = middy(login)
-  .use(httpJsonBodyParser()) // Parsar JSON till objekt
+  .use(httpJsonBodyParser()) // Parsar JSON från body till ett JS-objekt
   .use({
     before: validateInput, // Validering före huvudfunktionen
   })
