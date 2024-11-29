@@ -42,6 +42,24 @@ const createNote = async (event) => {
     title = String(title);
     text = String(text);
 
+    if (title.length > 50) {
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({
+          message: 'Title must be 50 characters or less.',
+        }),
+      };
+    }
+
+    if (text.length > 300) {
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({
+          message: 'Text must be 300 characters or less.',
+        }),
+      };
+    }
+
     const existingNote = await dynamoDb
       .scan({
         TableName: NOTES_TABLE,
