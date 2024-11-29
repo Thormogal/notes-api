@@ -36,3 +36,21 @@ This project utilizes:
 | **DELETE /api/notes**     | Used to delete a note. <br>The note is moved to a deleted notes table and can be restored later.             |
 | **GET /api/notes/deleted**| Used to fetch all deleted notes for the logged-in user. <br>Notes are returned in descending order by creation date. |
 | **POST /api/notes/restore** | Used to restore a deleted note. <br>Requires a valid JWT token in the Authorization header.                |
+
+<br>
+<br>
+<br>
+
+
+
+## Insomnia Export for API Testing
+
+To test this API in Insomnia, you can use the included export file. Follow these steps:
+
+1. Download the file [`Insomnia_API_Test.json`](./docs/Insomnia_API_Test.json) from this repository.
+2. Open Insomnia.
+3. Go to **Application → Preferences → Data → Import Data → From File**.
+4. Select the downloaded `.json` file.
+5. You will now have all the prepared endpoints ready for testing.
+
+Ensure that you replace placeholders like `<YOUR_TOKEN>` with actual values before making requests.
