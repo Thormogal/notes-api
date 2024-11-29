@@ -16,7 +16,6 @@ const getDeletedNotes = async (event) => {
   console.log('getDeletedNotes invoked:', JSON.stringify(event, null, 2));
 
   try {
-    // Hämta userId från authMiddleware
     const { userId } = event.requestContext.authorizer;
 
     if (!userId) {
@@ -27,7 +26,6 @@ const getDeletedNotes = async (event) => {
       };
     }
 
-    // Query för att hämta alla raderade anteckningar för användaren
     const result = await dynamoDb
       .query({
         TableName: DELETED_NOTES_TABLE,
@@ -38,14 +36,13 @@ const getDeletedNotes = async (event) => {
 
     console.log('Deleted notes retrieved successfully:', result.Items);
 
-    // Omstrukturera och sortera anteckningarna
     const formattedAndSortedNotes = sortNotes(
       (result.Items || []).map((note) => formatNote(note))
     );
 
     return {
       statusCode: statusCodes.OK,
-      body: JSON.stringify(formattedAndSortedNotes), // Returnera formaterade och sorterade anteckningar
+      body: JSON.stringify(formattedAndSortedNotes),
     };
   } catch (error) {
     console.error('Error during getDeletedNotes:', error);
@@ -56,7 +53,6 @@ const getDeletedNotes = async (event) => {
   }
 };
 
-// Konfigurera hanterare med Middy
 export const handler = middy(getDeletedNotes)
-  .use(authMiddleware()) // Middleware för autentisering
-  .use(httpErrorHandler()); // Middleware för att hantera fel
+  .use(authMiddleware())
+  .use(httpErrorHandler());
