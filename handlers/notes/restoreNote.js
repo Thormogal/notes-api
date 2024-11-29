@@ -6,7 +6,6 @@ import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import statusCodes from '../../utils/statusCodes.js';
 
-// Ladda miljövariabler från .env
 dotenv.config();
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
@@ -15,25 +14,56 @@ const DELETED_NOTES_TABLE = process.env.DELETED_NOTES_TABLE;
 
 const restoreNote = async (event) => {
   try {
-    // Logga inkommande request för debugging
     console.log('restoreNote invoked with event:', JSON.stringify(event, null, 2));
 
-    // Hämta userId från authMiddleware
     const { userId } = event.requestContext.authorizer;
-    const { id } = event.body;
 
-    // Validera att ID finns
+    let body = event.body;
+
+    if (!body) {
+      console.error('Bad Request: Body is missing');
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({
+          message: 'Request body must contain a valid "id" field.',
+        }),
+      };
+    }
+
+    try {
+      body = typeof body === 'string' ? JSON.parse(body) : body;
+    } catch (error) {
+      console.error('Bad Request: Invalid JSON body');
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({
+          message: 'Request body must be valid JSON.',
+        }),
+      };
+    }
+
+    const { id } = body;
+
     if (!id) {
-      console.error('Missing note ID in request body');
+      console.error('Bad Request: Missing "id" field');
       return {
         statusCode: statusCodes.BAD_REQUEST,
         body: JSON.stringify({ message: 'Note ID is required' }),
       };
     }
 
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      console.error('Bad Request: "id" field is invalid');
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({
+          message: 'Note ID must be a non-empty string.',
+        }),
+      };
+    }
+
     console.log(`Restoring note with id: ${id} for userId: ${userId}`);
 
-    // Kontrollera om anteckningen finns i DELETED_NOTES_TABLE
     const result = await dynamoDb
       .get({
         TableName: DELETED_NOTES_TABLE,
@@ -51,7 +81,6 @@ const restoreNote = async (event) => {
 
     const noteToRestore = result.Item;
 
-    // Lägg tillbaka anteckningen i NOTES_TABLE
     console.log('Restoring note to NOTES_TABLE:', noteToRestore);
 
     await dynamoDb
@@ -59,13 +88,12 @@ const restoreNote = async (event) => {
         TableName: NOTES_TABLE,
         Item: {
           ...noteToRestore,
-          modifiedAt: new Date().toISOString(), // Uppdatera modifiedAt
-          restoredAt: new Date().toISOString(), // Lägg till restoredAt
+          modifiedAt: new Date().toISOString(),
+          restoredAt: new Date().toISOString(),
         },
       })
       .promise();
 
-    // Ta bort anteckningen från DELETED_NOTES_TABLE
     console.log(`Removing note from DELETED_NOTES_TABLE with id: ${id}`);
 
     await dynamoDb
