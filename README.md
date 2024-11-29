@@ -8,7 +8,7 @@ An API for managing user-specific notes. The notes are protected and accessible 
 
 - **Sign up and log in**: Manage user accounts.
 - **Fetch notes**: Retrieve notes associated with the logged-in user.
-- **Create, update, and delete**: Full CRUD functionality.
+- **Create, Read, Update, Delete**: Full CRUD functionality.
 
 ---
 
