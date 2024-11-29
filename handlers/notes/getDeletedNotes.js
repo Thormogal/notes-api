@@ -37,7 +37,11 @@ const getDeletedNotes = async (event) => {
     console.log('Deleted notes retrieved successfully:', result.Items);
 
     const formattedAndSortedNotes = sortNotes(
-      (result.Items || []).map((note) => formatNote(note))
+      (result.Items || []).map((note) => {
+        const formattedNote = formatNote(note);
+        delete formattedNote.restoredAt;
+        return formattedNote;
+      })
     );
 
     return {
