@@ -1,13 +1,13 @@
-import dotenv from 'dotenv'; // Importera dotenv
-dotenv.config(); // Ladda .env-variabler
-
+import dotenv from 'dotenv';
 import middy from '@middy/core';
 import httpJsonBodyParser from '@middy/http-json-body-parser';
 import httpErrorHandler from '@middy/http-error-handler';
 import AWS from 'aws-sdk';
 import bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid'; // Importera för att generera userId
+import { v4 as uuidv4 } from 'uuid';
 import statusCodes from '../../utils/statusCodes.js';
+
+dotenv.config();
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const USERS_TABLE = process.env.USERS_TABLE;

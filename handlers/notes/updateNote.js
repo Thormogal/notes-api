@@ -1,11 +1,12 @@
 import middy from '@middy/core';
 import httpJsonBodyParser from '@middy/http-json-body-parser';
 import httpErrorHandler from '@middy/http-error-handler';
-import { authMiddleware } from '../../utils/authMiddleware.js'; // Importera authMiddleware
+import { authMiddleware } from '../../utils/authMiddleware.js';
 import AWS from 'aws-sdk';
 import Ajv from 'ajv';
 import dotenv from 'dotenv';
 import statusCodes from '../../utils/statusCodes.js';
+import formatNote from '../../utils/formatNote.js';
 
 // Ladda miljövariabler
 dotenv.config();
@@ -62,9 +63,12 @@ const updateNote = async (event) => {
 
     console.log('Update successful:', result.Attributes);
 
+    // Formatera den uppdaterade anteckningen med formatNote
+    const formattedNote = formatNote(result.Attributes);
+
     return {
       statusCode: statusCodes.OK,
-      body: JSON.stringify(result.Attributes), // Returnera den uppdaterade anteckningen
+      body: JSON.stringify(formattedNote), // Returnera formaterad anteckning
     };
   } catch (error) {
     console.error('Error during updateNote:', error);

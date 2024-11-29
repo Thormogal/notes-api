@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import Ajv from 'ajv';
 import statusCodes from '../../utils/statusCodes.js';
+import formatNote from '../../utils/formatNote.js';
 
 // Ladda miljövariabler från .env
 dotenv.config();
@@ -37,10 +38,13 @@ const createNote = async (event) => {
     // Spara till DynamoDB
     await dynamoDb.put({ TableName: NOTES_TABLE, Item: newNote }).promise();
 
-    // Returnera det skapade objektet
+    // Formatera anteckningen med formatNote
+    const formattedNote = formatNote(newNote);
+
+    // Returnera det formaterade objektet
     return {
       statusCode: statusCodes.CREATED,
-      body: JSON.stringify(newNote),
+      body: JSON.stringify(formattedNote),
     };
   } catch (error) {
     console.error('Error during createNote:', error);

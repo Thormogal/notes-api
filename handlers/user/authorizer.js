@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
-dotenv.config();
-
 import jwt from 'jsonwebtoken';
+
+dotenv.config();
 
 // Huvudfunktion för Authorizer
 const authorize = async (event) => {
