@@ -1,11 +1,13 @@
 import dotenv from 'dotenv';
-dotenv.config();
-
 import middy from '@middy/core';
 import httpErrorHandler from '@middy/http-error-handler';
 import { authMiddleware } from '../../utils/authMiddleware.js';
 import AWS from 'aws-sdk';
 import statusCodes from '../../utils/statusCodes.js';
+import formatNote from '../../utils/formatNote.js';
+import sortNotes from '../../utils/sortNotes.js';
+
+dotenv.config();
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const DELETED_NOTES_TABLE = process.env.DELETED_NOTES_TABLE;
@@ -36,9 +38,14 @@ const getDeletedNotes = async (event) => {
 
     console.log('Deleted notes retrieved successfully:', result.Items);
 
+    // Omstrukturera och sortera anteckningarna
+    const formattedAndSortedNotes = sortNotes(
+      (result.Items || []).map((note) => formatNote(note))
+    );
+
     return {
       statusCode: statusCodes.OK,
-      body: JSON.stringify(result.Items || []), // Returnera en tom array om inga anteckningar hittas
+      body: JSON.stringify(formattedAndSortedNotes), // Returnera formaterade och sorterade anteckningar
     };
   } catch (error) {
     console.error('Error during getDeletedNotes:', error);

@@ -1,9 +1,11 @@
 import middy from '@middy/core';
 import httpErrorHandler from '@middy/http-error-handler';
-import { authMiddleware } from '../../utils/authMiddleware.js'; // Importera authMiddleware
+import { authMiddleware } from '../../utils/authMiddleware.js';
 import AWS from 'aws-sdk';
-import dotenv from 'dotenv'; // För att säkerställa att miljövariabler laddas
+import dotenv from 'dotenv';
 import statusCodes from '../../utils/statusCodes.js';
+import formatNote from '../../utils/formatNote.js';
+import sortNotes from '../../utils/sortNotes.js';
 
 // Ladda miljövariabler
 dotenv.config();
@@ -42,12 +44,15 @@ const getNotes = async (event) => {
       })
       .promise();
 
+    // Omstrukturera anteckningar med formatNote och sortera dem med sortNotes
+    const notes = sortNotes((result.Items || []).map((note) => formatNote(note)));
+
     // Logga resultatet för debugging
-    console.log('Notes fetched successfully:', result.Items);
+    console.log('Notes fetched, formatted, and sorted successfully:', notes);
 
     return {
       statusCode: statusCodes.OK,
-      body: JSON.stringify(result.Items || []), // Returnera tom array om inga anteckningar hittas
+      body: JSON.stringify(notes), // Returnera formaterade och sorterade anteckningar
     };
   } catch (error) {
     console.error('Error during getNotes:', error);
@@ -62,5 +67,5 @@ const getNotes = async (event) => {
 
 // Konfigurera med Middy
 export const handler = middy(getNotes)
-  .use(authMiddleware()) // Middleware för autentisering
-  .use(httpErrorHandler()); // Middleware för att hantera fel
+  .use(authMiddleware())
+  .use(httpErrorHandler());

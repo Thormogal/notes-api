@@ -4,7 +4,7 @@ import httpErrorHandler from '@middy/http-error-handler';
 import AWS from 'aws-sdk';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import Ajv from 'ajv'; // Importera Ajv
+import Ajv from 'ajv';
 import statusCodes from '../../utils/statusCodes.js';
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();

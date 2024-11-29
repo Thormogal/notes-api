@@ -60,6 +60,7 @@ const restoreNote = async (event) => {
         Item: {
           ...noteToRestore,
           modifiedAt: new Date().toISOString(), // Uppdatera modifiedAt
+          restoredAt: new Date().toISOString(), // Lägg till restoredAt
         },
       })
       .promise();
@@ -88,6 +89,6 @@ const restoreNote = async (event) => {
 };
 
 export const handler = middy(restoreNote)
-  .use(httpJsonBodyParser()) // För att parsa JSON i body
-  .use(authMiddleware()) // Autentisering
-  .use(httpErrorHandler()); // Felhantering
+  .use(httpJsonBodyParser())
+  .use(authMiddleware())
+  .use(httpErrorHandler());

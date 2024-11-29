@@ -3,7 +3,7 @@ import httpErrorHandler from '@middy/http-error-handler';
 import httpJsonBodyParser from '@middy/http-json-body-parser';
 import { authMiddleware } from '../../utils/authMiddleware.js';
 import AWS from 'aws-sdk';
-import dotenv from 'dotenv'; // Importera dotenv för miljövariabler
+import dotenv from 'dotenv';
 import statusCodes from '../../utils/statusCodes.js';
 
 // Ladda miljövariabler från .env
@@ -76,7 +76,9 @@ const deleteNote = async (event) => {
 
     return {
       statusCode: statusCodes.OK,
-      body: JSON.stringify({ message: 'Note deleted successfully' }),
+      body: JSON.stringify({
+        message: `Note with title "${noteToDelete.title}" deleted successfully`,
+      }),
     };
   } catch (error) {
     console.error('Error during deleteNote:', error);
