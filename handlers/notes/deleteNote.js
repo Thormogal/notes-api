@@ -6,7 +6,6 @@ import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import statusCodes from '../../utils/statusCodes.js';
 
-// Ladda miljövariabler från .env
 dotenv.config();
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
@@ -15,25 +14,56 @@ const DELETED_NOTES_TABLE = process.env.DELETED_NOTES_TABLE;
 
 const deleteNote = async (event) => {
   try {
-    // Logga inkommande request för debugging
     console.log('deleteNote invoked with event:', JSON.stringify(event, null, 2));
 
-    // Hämta userId från authMiddleware
     const { userId } = event.requestContext.authorizer;
-    const { id } = event.body;
 
-    // Validera att ID finns
+    let body = event.body;
+
+    if (!body) {
+      console.error('Bad Request: Body is missing');
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({
+          message: 'Request body must contain a valid "id" field.',
+        }),
+      };
+    }
+
+    try {
+      body = typeof body === 'string' ? JSON.parse(body) : body;
+    } catch (error) {
+      console.error('Bad Request: Invalid JSON body');
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({
+          message: 'Request body must be valid JSON.',
+        }),
+      };
+    }
+
+    const { id } = body;
+
     if (!id) {
-      console.error('Missing note ID in request body');
+      console.error('Bad Request: Missing "id" field');
       return {
         statusCode: statusCodes.BAD_REQUEST,
         body: JSON.stringify({ message: 'Note ID is required' }),
       };
     }
 
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      console.error('Bad Request: "id" field is invalid');
+      return {
+        statusCode: statusCodes.BAD_REQUEST,
+        body: JSON.stringify({
+          message: 'Note ID must be a non-empty string.',
+        }),
+      };
+    }
+
     console.log(`Deleting note with id: ${id} for userId: ${userId}`);
 
-    // Kontrollera om anteckningen existerar
     const result = await dynamoDb
       .get({
         TableName: NOTES_TABLE,
@@ -51,7 +81,6 @@ const deleteNote = async (event) => {
 
     const noteToDelete = result.Item;
 
-    // Lägg till anteckningen i DELETED_NOTES_TABLE
     console.log('Adding note to DELETED_NOTES_TABLE:', noteToDelete);
 
     await dynamoDb
@@ -59,12 +88,11 @@ const deleteNote = async (event) => {
         TableName: DELETED_NOTES_TABLE,
         Item: {
           ...noteToDelete,
-          deletedAt: new Date().toISOString(), // Lägger till när den togs bort
+          deletedAt: new Date().toISOString(),
         },
       })
       .promise();
 
-    // Ta bort anteckningen från NOTES_TABLE
     console.log(`Removing note from NOTES_TABLE with id: ${id}`);
 
     await dynamoDb
@@ -92,6 +120,6 @@ const deleteNote = async (event) => {
 };
 
 export const handler = middy(deleteNote)
-  .use(httpJsonBodyParser()) // För att parsa JSON i body
-  .use(authMiddleware()) // Autentisering
-  .use(httpErrorHandler()); // Felhantering
+  .use(httpJsonBodyParser())
+  .use(authMiddleware())
+  .use(httpErrorHandler());
